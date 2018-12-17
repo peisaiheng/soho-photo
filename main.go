@@ -27,7 +27,37 @@ var ApiPath string
 
 func main() {
 
-	ApiPath = SohoProd
+	if len(os.Args) < 2 || !strings.Contains(os.Args[1], "csv") {
+		fmt.Println(`Key in ./<programe name> <csv file>`)
+		fmt.Println(`**********
+* This script works by providing a CSV with the following headers, in the exact order.
+* user_id, property_id, listing_id, listing_state, authentication_token
+**********`)
+		return
+	}
+
+	// Staging or Prod
+	fmt.Print("Are you sending data to Staging or Prod?\n\n" + "1) Staging\n" + "2) Production\n\n" + "Select with 1 or 2:")
+	scanner := bufio.NewScanner(os.Stdin)
+	counter := 0
+	for scanner.Scan() {
+		if counter >= 2 {
+			fmt.Println(`Please execute the programme again`)
+			break
+		}
+		if scanner.Text() == "1" {
+			ApiPath = SohoStaging
+			break
+		} else if scanner.Text() == "2" {
+			ApiPath = SohoProd
+			break
+		}
+		if scanner.Text() != "1" || scanner.Text() != "2" {
+			counter++
+			fmt.Print(`Please type only 1 or 2:`)
+		}
+	}
+
 
 	//open csv file from args
 	fileName := os.Args[1]
@@ -48,12 +78,13 @@ func main() {
 			log.Fatal(err)
 		}
 
-		user_id, property_id, listing_id, state, Token := record[0], record[1], record[2], record[3], record[4]
+		user_id, property_id, listing_id, state := record[0], record[1], record[2], record[3]
+		Token = record[4]
 		fmt.Println(user_id, property_id, listing_id, state, Token)
 
 		// Find the directory (photos of the listing should be in the folder named by property id)
 
-		dirname := `./temp` + property_id + `/` // directory of photos for a single listing
+		dirname := `./temp/` + property_id + `/` // directory of photos for a single listing
 
 		list, err := ReadDir(dirname)
 		if err != nil {
@@ -76,10 +107,10 @@ func main() {
 		// Upload photos
 		fmt.Println(ApiPath + SohoManageEndpoint + "/" + listing_id)
 		fmt.Println(photoMap)
-		//err = Upload(ApiPath+SohoManageEndpoint+"/"+listing_id, photoMap)
-		//if err != nil {
-		//	fmt.Println(err)
-		//}
+		err = Upload(ApiPath+SohoManageEndpoint+"/"+listing_id, photoMap)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
